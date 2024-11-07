@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import openpyxl
 
 st.title("Cargar y procesar archivo CSV y Excel")
 
