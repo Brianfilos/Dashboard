@@ -182,6 +182,55 @@ if not registro_servicios_bancarios.empty:
 # Excluir los registros marcados del DataFrame final de no cruzados
 df_csv_no_cruzados = df_csv_no_cruzados[~df_csv_no_cruzados['Usado_en_cruce_servicios']]
 
+# Cruce manual aproximado de registros restantes
+st.subheader("Cruce Manual de Registros Restantes (±1 peso)")
+
+df_csv_no_cruzados['Usado_en_cruce_aproximado'] = False
+registros_confirmados = []
+
+for idx_csv, row_csv in df_csv_no_cruzados[df_csv_no_cruzados['Salidas'] > 0].iterrows():
+    posibles_cruces = df_excel_no_cruzados[
+        (df_excel_no_cruzados['Debito'] > 0) &
+        (df_excel_no_cruzados['Debito'] >= row_csv['Salidas'] - 1) &
+        (df_excel_no_cruzados['Debito'] <= row_csv['Salidas'] + 1)
+    ]
+
+    if not posibles_cruces.empty:
+        st.write(f"Registro CSV:")
+        st.write(row_csv[['FECHA', 'Salidas', 'DESCRIPCION']])
+        
+        for idx_excel, row_excel in posibles_cruces.iterrows():
+            diferencia = row_excel['Debito'] - row_csv['Salidas']
+            st.write("Posible cruce en Excel:")
+            st.write(row_excel[['Fecha documento', 'Debito', 'Observaciones']])
+            st.write(f"Diferencia: {diferencia:.2f}")
+
+            if st.button(f"Confirmar cruce para registro CSV {idx_csv} y Excel {idx_excel}", key=f"confirm_{idx_csv}_{idx_excel}"):
+                cruce_confirmado = pd.concat([row_csv, row_excel], axis=0)
+                cruce_confirmado['Diferencia'] = diferencia
+                registros_confirmados.append(cruce_confirmado)
+
+                df_csv_no_cruzados.at[idx_csv, 'Usado_en_cruce_aproximado'] = True
+                df_excel.at[idx_excel, 'cruzado'] = True
+
+# Actualizar DataFrames finales después de los cruces confirmados
+df_cruzados = pd.concat([df_cruzados] + registros_confirmados, ignore_index=True)
+df_csv_no_cruzados_final = df_csv_no_cruzados[~df_csv_no_cruzados['Usado_en_cruce_aproximado']]
+
+# Mostrar los DataFrames actualizados
+st.write("Registros cruzados (incluyendo cruces aproximados):")
+st.write(f"Cantidad de registros cruzados (total): {len(df_cruzados)}")
+st.dataframe(df_cruzados)
+
+st.write("Registros no cruzados en el CSV (final):")
+st.write(f"Cantidad de registros no cruzados en CSV (final): {len(df_csv_no_cruzados_final)}")
+st.dataframe(df_csv_no_cruzados_final)
+
+st.write("Registros del Excel sin cruzar (actualizado):")
+st.write(f"Cantidad de registros sin cruzar en Excel (actualizado): {len(df_excel[~df_excel['cruzado']])}")
+st.dataframe(df_excel[~df_excel['cruzado']])
+
+    
     # DataFrames finales y visualización
     df_cruzados = pd.DataFrame(registros_cruzados)
     st.write("Registros cruzados (con cruce adicional de gastos):")
