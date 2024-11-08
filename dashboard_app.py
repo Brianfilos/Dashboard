@@ -137,6 +137,54 @@ if excel_file is not None:
         st.write(f"Diferencia entre la suma del CSV y el registro del Excel: {diferencia}")
     # Excluir los registros marcados del DataFrame final de no cruzados
     df_csv_no_cruzados_final = df_csv_no_cruzados[~df_csv_no_cruzados['Usado_en_cruce_gastos']].drop(columns=['Usado_en_cruce_gastos'])
+    # Cruce adicional: servicios de telecomunicaciones
+descripciones_servicios = [
+    "PAGO PSE UNE - EPM Telecomuni",
+    "PAGO SV TIGO SERVICIOS HOGAR"
+]
+
+df_csv_no_cruzados['Usado_en_cruce_servicios'] = False  # Añadir esta columna para marcar los registros
+suma_servicios = 0
+
+for idx, row in df_csv_no_cruzados.iterrows():
+    if row['DESCRIPCION'] in descripciones_servicios:
+        suma_servicios += row['Salidas']
+        df_csv_no_cruzados.at[idx, 'Usado_en_cruce_servicios'] = True
+
+df_registros_usados_csv_servicios = df_csv_no_cruzados[df_csv_no_cruzados['Usado_en_cruce_servicios']]
+st.write("Registros utilizados del CSV para el cruce de servicios:")
+st.write(f"Cantidad de registros utilizados: {len(df_registros_usados_csv_servicios)}")
+st.dataframe(df_registros_usados_csv_servicios)
+st.write(f"Suma total de Salidas utilizadas para servicios: {suma_servicios}")
+
+registro_servicios_bancarios = df_excel_no_cruzados[
+    df_excel_no_cruzados['Observaciones'].str.contains("SERVICIOS PUBLICOS INTERNET", case=False, na=False) &
+    (df_excel_no_cruzados['Credito'] > 0)
+]
+
+if not registro_servicios_bancarios.empty:
+    registro_servicios = registro_servicios_bancarios.iloc[0]
+    diferencia_servicios = registro_servicios['Credito'] - suma_servicios
+    cruce_servicios = pd.concat([registro_servicios, df_csv_no_cruzados[df_csv_no_cruzados['Usado_en_cruce_servicios']].sum(numeric_only=True)], axis=0)
+    cruce_servicios['Diferencia'] = diferencia_servicios
+    cruce_servicios['Nota'] = f"Cruce parcial con diferencia de {diferencia_servicios:.2f}. Registros CSV usados: {df_csv_no_cruzados['Usado_en_cruce_servicios'].sum()}"
+
+    df_excel.at[registro_servicios.name, 'cruzado'] = True
+    registros_cruzados.append(cruce_servicios)
+
+    st.write("Resultado del cruce de servicios:")
+    st.write("Registro del Excel con el que se cruzó:")
+    st.dataframe(registro_servicios.to_frame().T)
+    st.write(f"Diferencia entre la suma del CSV y el registro del Excel: {diferencia_servicios}")
+
+    df_csv_no_cruzados = df_csv_no_cruzados[
+    ~df_csv_no_cruzados['Usado_en_cruce_gastos'] &
+    ~df_csv_no_cruzados['Usado_en_cruce_servicios']
+    ]
+
+
+
+    
     # DataFrames finales y visualización
     df_cruzados = pd.DataFrame(registros_cruzados)
     st.write("Registros cruzados (con cruce adicional de gastos):")
