@@ -53,7 +53,7 @@ if excel_file is not None:
     st.write(f"Total de registros en Excel: {df_excel.shape[0]}")
     st.dataframe(df_excel)
 
-    # Cruce directo desde CSV hacia Excel
+    # Primer cruce directo entre CSV y Excel
     for idx_csv, row_csv in df_csv.iterrows():
         if row_csv['Entradas'] > 0:  # Buscar cruce en Debitos
             cruce_entrada = df_excel[(df_excel['Debito'] == row_csv['Entradas']) & (~df_excel['cruzado'])]
@@ -72,11 +72,11 @@ if excel_file is not None:
             else:
                 registros_no_cruzados.append(row_csv)
 
-    # Registros cruzados desde CSV hacia Excel
-    df_cruzados_csv_to_excel = pd.DataFrame(registros_cruzados)
+    # Registros cruzados
+    df_cruzados = pd.DataFrame(registros_cruzados)
     st.write("Registros cruzados (desde CSV hacia Excel):")
-    st.write(f"Cantidad de registros cruzados desde CSV: {len(df_cruzados_csv_to_excel)}")
-    st.dataframe(df_cruzados_csv_to_excel)
+    st.write(f"Cantidad de registros cruzados: {len(df_cruzados)}")
+    st.dataframe(df_cruzados)
 
     # Registros no cruzados en el CSV
     df_csv_no_cruzados = pd.DataFrame(registros_no_cruzados)
@@ -84,34 +84,100 @@ if excel_file is not None:
     st.write(f"Cantidad de registros no cruzados en CSV: {len(df_csv_no_cruzados)}")
     st.dataframe(df_csv_no_cruzados)
 
-    # Cruce desde la perspectiva del Excel hacia CSV
-    registros_cruzados_excel_to_csv = []
-    for idx_excel, row_excel in df_excel.iterrows():
-        if not row_excel['cruzado']:  # Solo revisar registros no cruzados
-            if row_excel['Debito'] > 0:
-                cruce_entrada = df_csv[(df_csv['Entradas'] == row_excel['Debito'])]
-                if not cruce_entrada.empty:
-                    registro_csv = cruce_entrada.iloc[0]
-                    registros_cruzados_excel_to_csv.append(pd.concat([row_excel, registro_csv], axis=0))
-                    df_csv.at[registro_csv.name, 'cruzado'] = True
-            elif row_excel['Credito'] > 0:
-                cruce_salida = df_csv[(df_csv['Salidas'] == row_excel['Credito'])]
-                if not cruce_salida.empty:
-                    registro_csv = cruce_salida.iloc[0]
-                    registros_cruzados_excel_to_csv.append(pd.concat([row_excel, registro_csv], axis=0))
-                    df_csv.at[registro_csv.name, 'cruzado'] = True
+    # Cruces desde la perspectiva del Excel
+    excel_perspective_cruces = []
+    for cruzado in registros_cruzados:
+        registro_csv = cruzado.iloc[:len(df_csv.columns)]
+        registro_excel = cruzado.iloc[len(df_csv.columns):]
+        combined_record = pd.concat([registro_excel, registro_csv], axis=0)
+        excel_perspective_cruces.append(combined_record)
 
-    # Registros cruzados desde Excel hacia CSV
-    df_cruzados_excel_to_csv = pd.DataFrame(registros_cruzados_excel_to_csv)
-    st.write("Registros cruzados (desde Excel hacia CSV):")
-    st.write(f"Cantidad de registros cruzados desde Excel: {len(df_cruzados_excel_to_csv)}")
-    st.dataframe(df_cruzados_excel_to_csv)
+    df_excel_perspective_cruces = pd.DataFrame(excel_perspective_cruces)
+    st.write("Cruces desde la perspectiva del Excel:")
+    st.write(f"Cantidad de registros cruzados desde Excel: {len(df_excel_perspective_cruces)}")
+    st.dataframe(df_excel_perspective_cruces)
 
-    # Registros no cruzados en el Excel (desde perspectiva del Excel)
-    df_excel_no_cruzados_final = df_excel[~df_excel['cruzado']]
-    st.write("Registros del Excel sin cruzar (desde la perspectiva del Excel):")
-    st.write(f"Cantidad de registros sin cruzar en Excel: {len(df_excel_no_cruzados_final)}")
-    st.dataframe(df_excel_no_cruzados_final)
+    # Registros sin cruzar en el Excel
+    df_excel_no_cruzados = df_excel[~df_excel['cruzado']].copy()
+    st.write("Registros del Excel sin cruzar:")
+    st.write(f"Cantidad de registros sin cruzar en Excel: {len(df_excel_no_cruzados)}")
+    st.dataframe(df_excel_no_cruzados)
+
+    # Nuevo cruce con gastos bancarios
+
+    # Definir las descripciones a filtrar para el cruce adicional
+    descripciones_filtro = [
+        "COMISION PAGO A OTROS BANCOS",
+        "COBRO IVA PAGOS AUTOMATICOS",
+        "IVA COMIS TRASL SUC VIRTUAL",
+        "COMISION TRASL SUC VIRTUAL",
+        "COMISION PAGO A PROVEEDORES",
+        "COMISION PAGO DE NOMINA",
+        "CUOTA MANEJO TARJETA PREPAGO",
+        "IVA POR COMISIONES CORRIENTE",
+        "CUOTA MANEJO SUC VIRT EMPRESA",
+        "IVA CUOTA MANEJO SUC VIRT EMP"
+    ]
+
+    # Eliminar espacios adicionales en DESCRIPCION para asegurar la búsqueda correcta
+    df_csv_no_cruzados['DESCRIPCION'] = df_csv_no_cruzados['DESCRIPCION'].str.strip()
+
+    # Añadir una columna temporal para marcar los registros utilizados en el cruce de gastos bancarios en el CSV
+    df_csv_no_cruzados['Usado_en_cruce_gastos'] = False  # Nueva columna para marcar el uso en cruce adicional
+    suma_salidas_filtro = 0  # Inicializar la suma
+
+    # Filtrar y sumar los valores de Salidas que coinciden con las descripciones, y marcar los registros como usados
+    for idx, row in df_csv_no_cruzados.iterrows():
+        if row['DESCRIPCION'] in descripciones_filtro:
+            suma_salidas_filtro += row['Salidas']
+            df_csv_no_cruzados.at[idx, 'Usado_en_cruce_gastos'] = True  # Marcar como usado
+
+    # Mostrar los registros utilizados del CSV para la suma
+    df_registros_usados_csv = df_csv_no_cruzados[df_csv_no_cruzados['Usado_en_cruce_gastos']]
+    st.write("Registros utilizados del CSV para la suma de gastos bancarios:")
+    st.write(f"Cantidad de registros utilizados: {len(df_registros_usados_csv)}")
+    st.dataframe(df_registros_usados_csv)
+    st.write(f"Suma total de Salidas utilizadas: {suma_salidas_filtro}")
+
+    # Buscar un registro en los no cruzados del Excel que contenga "GASTOS BANCARIOS CUENTA" en Observaciones
+    registro_gastos_bancarios = df_excel_no_cruzados[
+        df_excel_no_cruzados['Observaciones'].str.contains("GASTOS BANCARIOS CUENTA", case=False, na=False) &
+        (df_excel_no_cruzados['Credito'] > 0)
+    ]
+
+    if not registro_gastos_bancarios.empty:
+        registro_gastos = registro_gastos_bancarios.iloc[0]
+        diferencia = registro_gastos['Credito'] - suma_salidas_filtro
+        cruce_gastos = pd.concat([registro_gastos, df_csv_no_cruzados[df_csv_no_cruzados['Usado_en_cruce_gastos']].sum(numeric_only=True)], axis=0)
+        cruce_gastos['Diferencia'] = diferencia
+        cruce_gastos['Nota'] = f"Cruce parcial con diferencia de {diferencia:.2f}. Registros CSV usados: {df_csv_no_cruzados['Usado_en_cruce_gastos'].sum()}"
+
+        # Marcar como cruzado en el Excel y actualizar no cruzados del CSV
+        df_excel.at[registro_gastos.name, 'cruzado'] = True
+        registros_cruzados.append(cruce_gastos)
+
+        # Mostrar el resultado del cruce de gastos bancarios
+        st.write("Resultado del cruce de gastos bancarios:")
+        st.write("Registro del Excel con el que se cruzó:")
+        st.dataframe(registro_gastos.to_frame().T)
+        st.write(f"Diferencia entre la suma del CSV y el registro del Excel: {diferencia}")
+
+    # Excluir los registros marcados del DataFrame final de no cruzados
+    df_csv_no_cruzados_final = df_csv_no_cruzados[~df_csv_no_cruzados['Usado_en_cruce_gastos']].drop(columns=['Usado_en_cruce_gastos'])
+
+    # DataFrames finales y visualización
+    df_cruzados = pd.DataFrame(registros_cruzados)
+    st.write("Registros cruzados (con cruce adicional de gastos):")
+    st.write(f"Cantidad de registros cruzados (total): {len(df_cruzados)}")
+    st.dataframe(df_cruzados)
+
+    st.write("Registros no cruzados en el CSV (final):")
+    st.write(f"Cantidad de registros no cruzados en CSV (final): {len(df_csv_no_cruzados_final)}")
+    st.dataframe(df_csv_no_cruzados_final)
+
+    st.write("Registros del Excel sin cruzar (actualizado):")
+    st.write(f"Cantidad de registros sin cruzar en Excel (actualizado): {len(df_excel[~df_excel['cruzado']])}")
+    st.dataframe(df_excel[~df_excel['cruzado']])
 
 
 
