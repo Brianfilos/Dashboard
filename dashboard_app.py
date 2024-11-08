@@ -87,7 +87,12 @@ if excel_file is not None:
     st.write(f"Cantidad de registros sin cruzar en Excel: {len(df_excel_no_cruzados)}")
     st.dataframe(df_excel_no_cruzados)
     # Nuevo cruce con gastos bancarios
-    # Definir las descripciones a filtrar para el cruce adicional
+   # Verifica que el DataFrame no esté vacío antes de añadir columnas adicionales
+    if not df_csv_no_cruzados.empty:
+    # Añadir columna para el cruce de gastos bancarios
+    df_csv_no_cruzados['Usado_en_cruce_gastos'] = False
+
+    # Realizar cruce con gastos bancarios
     descripciones_filtro = [
         "COMISION PAGO A OTROS BANCOS",
         "COBRO IVA PAGOS AUTOMATICOS",
@@ -138,6 +143,9 @@ if excel_file is not None:
     # Excluir los registros marcados del DataFrame final de no cruzados
     df_csv_no_cruzados_final = df_csv_no_cruzados[~df_csv_no_cruzados['Usado_en_cruce_gastos']].drop(columns=['Usado_en_cruce_gastos'])
 
+    # Añadir columna para el cruce de servicios de telecomunicaciones
+    df_csv_no_cruzados['Usado_en_cruce_servicios'] = False
+
     # Cruce adicional: servicios de telecomunicaciones
 descripciones_servicios = [
     "PAGO PSE UNE - EPM Telecomuni",
@@ -178,13 +186,15 @@ if not registro_servicios_bancarios.empty:
     st.dataframe(registro_servicios.to_frame().T)
     st.write(f"Diferencia entre la suma del CSV y el registro del Excel: {diferencia_servicios}")
 
-# Excluir los registros marcados del DataFrame final de no cruzados
-df_csv_no_cruzados = df_csv_no_cruzados[
-    ~df_csv_no_cruzados['Usado_en_cruce_gastos'] &
-    ~df_csv_no_cruzados['Usado_en_cruce_servicios']
-]
-
+# Excluir los registros marcados en ambos cruces del DataFrame final de no cruzados
+    df_csv_no_cruzados_final = df_csv_no_cruzados[
+        ~df_csv_no_cruzados['Usado_en_cruce_gastos'] &
+        ~df_csv_no_cruzados['Usado_en_cruce_servicios']
+    ]
+else:
+    st.write("No hay registros no cruzados en el CSV después del primer cruce.")
 # Cruce manual aproximado de registros restantes (±1 peso)
+
 st.subheader("Cruce Manual de Registros Restantes (±1 peso)")
 
 df_csv_no_cruzados['Usado_en_cruce_aproximado'] = False  # Añadir esta columna para marcar los registros
