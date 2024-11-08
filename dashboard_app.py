@@ -74,8 +74,8 @@ st.write("Registros no cruzados en el CSV:")
 st.write(f"Cantidad de registros no cruzados en CSV: {len(df_csv_no_cruzados)}")
 st.dataframe(df_csv_no_cruzados)
 
-    # Cruces desde la perspectiva del Excel
-    excel_perspective_cruces = []
+# Cruces desde la perspectiva del Excel
+excel_perspective_cruces = []
     for cruzado in registros_cruzados:
         registro_csv = cruzado.iloc[:len(df_csv.columns)]
         registro_excel = cruzado.iloc[len(df_csv.columns):]
