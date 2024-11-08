@@ -192,6 +192,9 @@ if excel_file is not None:
         st.dataframe(registro_servicios.to_frame().T)
         st.write(f"Diferencia entre la suma del CSV y el registro del Excel: {diferencia_servicios}")
 
+# Asegúrate de definir `df_csv_no_cruzados` en la sección de registros no cruzados
+df_csv_no_cruzados = pd.DataFrame(registros_no_cruzados)  # Esto debe estar en el código previo
+
 # Funcionalidad de Cruce Aproximado de Registros Restantes
 st.subheader("Cruce Aproximado de Registros Restantes")
 
