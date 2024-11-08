@@ -60,16 +60,20 @@ if excel_file is not None:
                 df_excel.at[registro_excel.name, 'cruzado'] = True
             else:
                 registros_no_cruzados.append(row_csv)
-    # Registros cruzados
-    df_cruzados = pd.DataFrame(registros_cruzados)
-    st.write("Registros cruzados (desde CSV hacia Excel):")
-    st.write(f"Cantidad de registros cruzados: {len(df_cruzados)}")
-    st.dataframe(df_cruzados)
-    # Registros no cruzados en el CSV
-    df_csv_no_cruzados = pd.DataFrame(registros_no_cruzados)
-    st.write("Registros no cruzados en el CSV:")
-    st.write(f"Cantidad de registros no cruzados en CSV: {len(df_csv_no_cruzados)}")
-    st.dataframe(df_csv_no_cruzados)
+       # Registros cruzados
+df_cruzados = pd.DataFrame(registros_cruzados)
+st.write("Registros cruzados (desde CSV hacia Excel):")
+st.write(f"Cantidad de registros cruzados: {len(df_cruzados)}")
+st.dataframe(df_cruzados)
+
+# Definir DataFrame de no cruzados si no existe
+df_csv_no_cruzados = pd.DataFrame(registros_no_cruzados)
+
+# Mostrar los registros no cruzados
+st.write("Registros no cruzados en el CSV:")
+st.write(f"Cantidad de registros no cruzados en CSV: {len(df_csv_no_cruzados)}")
+st.dataframe(df_csv_no_cruzados)
+
     # Cruces desde la perspectiva del Excel
     excel_perspective_cruces = []
     for cruzado in registros_cruzados:
