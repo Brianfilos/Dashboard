@@ -88,7 +88,7 @@ if excel_file is not None:
     st.dataframe(df_excel_no_cruzados)
     # Nuevo cruce con gastos bancarios
    # Verifica que el DataFrame no esté vacío antes de añadir columnas adicionales
-    if not df_csv_no_cruzados.empty:
+        if not df_csv_no_cruzados.empty:
     # Añadir columna para el cruce de gastos bancarios
     df_csv_no_cruzados['Usado_en_cruce_gastos'] = False
 
