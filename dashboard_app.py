@@ -87,8 +87,12 @@ if excel_file is not None:
     st.write(f"Cantidad de registros sin cruzar en Excel: {len(df_excel_no_cruzados)}")
     st.dataframe(df_excel_no_cruzados)
     # Nuevo cruce con gastos bancarios
-   # Verifica que el DataFrame no esté vacío antes de añadir columnas adicionales
-        if not df_csv_no_cruzados.empty:
+  # Definir DataFrame de no cruzados si no existe después del cruce inicial
+if 'df_csv_no_cruzados' not in locals():
+    df_csv_no_cruzados = pd.DataFrame(registros_no_cruzados)
+
+# Verifica que el DataFrame no esté vacío antes de añadir columnas adicionales
+if not df_csv_no_cruzados.empty:
     # Añadir columna para el cruce de gastos bancarios
     df_csv_no_cruzados['Usado_en_cruce_gastos'] = False
 
