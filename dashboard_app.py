@@ -87,7 +87,7 @@ if excel_file is not None:
     st.write(f"Cantidad de registros sin cruzar en Excel: {len(df_excel_no_cruzados)}")
     st.dataframe(df_excel_no_cruzados)
     # Nuevo cruce con gastos bancarios
-    # Cruce adicional: gastos bancarios
+# Cruce adicional: gastos bancarios
 descripciones_filtro = [
     "COMISION PAGO A OTROS BANCOS",
     "COBRO IVA PAGOS AUTOMATICOS",
@@ -101,14 +101,14 @@ descripciones_filtro = [
     "IVA CUOTA MANEJO SUC VIRT EMP"
 ]
 
-df_csv_no_cruzados['DESCRIPCION'] = df_csv_no_cruzados['DESCRIPCION'].str.strip()
-df_csv_no_cruzados['Usado_en_cruce_gastos'] = False
+df_csv_no_cruzados['Usado_en_cruce_gastos'] = False  # Añadir esta columna para marcar los registros
 suma_salidas_filtro = 0
 
 for idx, row in df_csv_no_cruzados.iterrows():
     if row['DESCRIPCION'] in descripciones_filtro:
         suma_salidas_filtro += row['Salidas']
-        df_csv_no_cruzados.at[idx, 'Usado_en_cruce_gastos'] = True
+        df_csv_no_cruzados.at[idx, 'Usado_en_cruce_gastos'] = True  # Marcar como usado sin sobrescribir el DataFrame
+
 
 df_registros_usados_csv = df_csv_no_cruzados[df_csv_no_cruzados['Usado_en_cruce_gastos']]
 st.write("Registros utilizados del CSV para la suma de gastos bancarios:")
@@ -139,19 +139,20 @@ if not registro_gastos_bancarios.empty:
     # Excluir los registros marcados del DataFrame final de no cruzados
     df_csv_no_cruzados = df_csv_no_cruzados[~df_csv_no_cruzados['Usado_en_cruce_gastos']]
 
-    # Cruce adicional: servicios de telecomunicaciones
+  # Cruce adicional: servicios de telecomunicaciones
 descripciones_servicios = [
     "PAGO PSE UNE - EPM Telecomuni",
     "PAGO SV TIGO SERVICIOS HOGAR"
 ]
 
-df_csv_no_cruzados['Usado_en_cruce_servicios'] = False
+df_csv_no_cruzados['Usado_en_cruce_servicios'] = False  # Añadir esta columna para marcar los registros
 suma_servicios = 0
 
 for idx, row in df_csv_no_cruzados.iterrows():
     if row['DESCRIPCION'] in descripciones_servicios:
         suma_servicios += row['Salidas']
-        df_csv_no_cruzados.at[idx, 'Usado_en_cruce_servicios'] = True
+        df_csv_no_cruzados.at[idx, 'Usado_en_cruce_servicios'] = True  # Marcar como usado sin sobrescribir el DataFrame
+
 
 df_registros_usados_csv_servicios = df_csv_no_cruzados[df_csv_no_cruzados['Usado_en_cruce_servicios']]
 st.write("Registros utilizados del CSV para el cruce de servicios:")
@@ -179,16 +180,20 @@ if not registro_servicios_bancarios.empty:
     st.dataframe(registro_servicios.to_frame().T)
     st.write(f"Diferencia entre la suma del CSV y el registro del Excel: {diferencia_servicios}")
 
-# Excluir los registros marcados del DataFrame final de no cruzados
-df_csv_no_cruzados = df_csv_no_cruzados[~df_csv_no_cruzados['Usado_en_cruce_servicios']]
+# Excluir todos los registros marcados en cruce de gastos y servicios de telecomunicaciones
+df_csv_no_cruzados_final = df_csv_no_cruzados[
+    ~df_csv_no_cruzados['Usado_en_cruce_gastos'] &
+    ~df_csv_no_cruzados['Usado_en_cruce_servicios']
+]
 
-# Cruce manual aproximado de registros restantes
+# Cruce manual aproximado de registros restantes (±1 peso)
 st.subheader("Cruce Manual de Registros Restantes (±1 peso)")
 
-df_csv_no_cruzados['Usado_en_cruce_aproximado'] = False
+df_csv_no_cruzados_final['Usado_en_cruce_aproximado'] = False  # Evita modificar el original
 registros_confirmados = []
 
-for idx_csv, row_csv in df_csv_no_cruzados[df_csv_no_cruzados['Salidas'] > 0].iterrows():
+# Bucle para buscar registros manualmente entre los no cruzados en el CSV y Excel
+for idx_csv, row_csv in df_csv_no_cruzados_final[df_csv_no_cruzados_final['Salidas'] > 0].iterrows():
     posibles_cruces = df_excel_no_cruzados[
         (df_excel_no_cruzados['Debito'] > 0) &
         (df_excel_no_cruzados['Debito'] >= row_csv['Salidas'] - 1) &
@@ -205,17 +210,19 @@ for idx_csv, row_csv in df_csv_no_cruzados[df_csv_no_cruzados['Salidas'] > 0].it
             st.write(row_excel[['Fecha documento', 'Debito', 'Observaciones']])
             st.write(f"Diferencia: {diferencia:.2f}")
 
+            # Botón de confirmación de cruce para el usuario
             if st.button(f"Confirmar cruce para registro CSV {idx_csv} y Excel {idx_excel}", key=f"confirm_{idx_csv}_{idx_excel}"):
                 cruce_confirmado = pd.concat([row_csv, row_excel], axis=0)
                 cruce_confirmado['Diferencia'] = diferencia
                 registros_confirmados.append(cruce_confirmado)
 
-                df_csv_no_cruzados.at[idx_csv, 'Usado_en_cruce_aproximado'] = True
+                # Marcar los registros como cruzados
+                df_csv_no_cruzados_final.at[idx_csv, 'Usado_en_cruce_aproximado'] = True
                 df_excel.at[idx_excel, 'cruzado'] = True
 
 # Actualizar DataFrames finales después de los cruces confirmados
 df_cruzados = pd.concat([df_cruzados] + registros_confirmados, ignore_index=True)
-df_csv_no_cruzados_final = df_csv_no_cruzados[~df_csv_no_cruzados['Usado_en_cruce_aproximado']]
+df_csv_no_cruzados_final = df_csv_no_cruzados_final[~df_csv_no_cruzados_final['Usado_en_cruce_aproximado']]
 
 # Mostrar los DataFrames actualizados
 st.write("Registros cruzados (incluyendo cruces aproximados):")
@@ -230,21 +237,10 @@ st.write("Registros del Excel sin cruzar (actualizado):")
 st.write(f"Cantidad de registros sin cruzar en Excel (actualizado): {len(df_excel[~df_excel['cruzado']])}")
 st.dataframe(df_excel[~df_excel['cruzado']])
 
-    
-# DataFrames finales y visualización
-df_cruzados = pd.DataFrame(registros_cruzados)
-st.write("Registros cruzados (con cruce adicional de gastos):")
+# Visualización final de DataFrames
+st.write("Registros cruzados (con cruce adicional de gastos y servicios):")
 st.write(f"Cantidad de registros cruzados (total): {len(df_cruzados)}")
 st.dataframe(df_cruzados)
-st.write("Registros no cruzados en el CSV (final):")
-st.write(f"Cantidad de registros no cruzados en CSV (final): {len(df_csv_no_cruzados_final)}")
-st.dataframe(df_csv_no_cruzados_final)
-st.write("Registros del Excel sin cruzar (actualizado):")
-st.write(f"Cantidad de registros sin cruzar en Excel (actualizado): {len(df_excel[~df_excel['cruzado']])}")
-st.dataframe(df_excel[~df_excel['cruzado']])
-
-
-
 
 
 
