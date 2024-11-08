@@ -76,7 +76,7 @@ st.dataframe(df_csv_no_cruzados)
 
 # Cruces desde la perspectiva del Excel
 excel_perspective_cruces = []
-    for cruzado in registros_cruzados:
+for cruzado in registros_cruzados:
         registro_csv = cruzado.iloc[:len(df_csv.columns)]
         registro_excel = cruzado.iloc[len(df_csv.columns):]
         combined_record = pd.concat([registro_excel, registro_csv], axis=0)
