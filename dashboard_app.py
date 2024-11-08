@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+
 st.title("Cargar y procesar archivo CSV y Excel")
 # Cargar archivo CSV sin nombres de columna
 csv_file = st.file_uploader("Cargar archivo CSV", type=["csv"])
@@ -42,6 +43,8 @@ if excel_file is not None:
     st.write("Datos del Excel cargado:")
     st.write(f"Total de registros en Excel: {df_excel.shape[0]}")
     st.dataframe(df_excel)
+    # Inicializar `registros_cruzados` antes de usarlo
+    registros_cruzados = []
     # Primer cruce directo entre CSV y Excel
     for idx_csv, row_csv in df_csv.iterrows():
         if row_csv['Entradas'] > 0:  # Buscar cruce en Debitos
