@@ -254,6 +254,7 @@ st.dataframe(df_excel[~df_excel['cruzado']])
 
 
 
+
     
 
 
