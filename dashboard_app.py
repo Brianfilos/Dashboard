@@ -192,24 +192,60 @@ if excel_file is not None:
         st.dataframe(registro_servicios.to_frame().T)
         st.write(f"Diferencia entre la suma del CSV y el registro del Excel: {diferencia_servicios}")
 
-    # Actualización final de DataFrames
-    df_csv_no_cruzados_final = df_csv_no_cruzados[
-        ~df_csv_no_cruzados['Usado_en_cruce_gastos'] & ~df_csv_no_cruzados['Usado_en_cruce_servicios']
-    ].drop(columns=['Usado_en_cruce_gastos', 'Usado_en_cruce_servicios'])
+# Funcionalidad de Cruce Aproximado de Registros Restantes
+st.subheader("Cruce Aproximado de Registros Restantes")
 
-    # Mostrar DataFrames finales
-    df_cruzados = pd.DataFrame(registros_cruzados)
-    st.write("Registros cruzados (con cruces adicionales):")
-    st.write(f"Cantidad de registros cruzados (total): {len(df_cruzados)}")
-    st.dataframe(df_cruzados)
+# Inicializar lista para almacenar los registros confirmados por el usuario
+registros_confirmados = []
 
-    st.write("Registros no cruzados en el CSV (final):")
-    st.write(f"Cantidad de registros no cruzados en CSV (final): {len(df_csv_no_cruzados_final)}")
-    st.dataframe(df_csv_no_cruzados_final)
+# Para cada registro no cruzado en el CSV con Salidas, buscar coincidencia en el Excel dentro de ±1 peso
+for idx_csv, row_csv in df_csv_no_cruzados[df_csv_no_cruzados['Salidas'] > 0].iterrows():
+    # Buscar posibles cruces en el Excel con una diferencia de ±1 peso en el Debito
+    posibles_cruces = df_excel_no_cruzados[
+        (df_excel_no_cruzados['Debito'] > 0) &
+        (df_excel_no_cruzados['Debito'] >= row_csv['Salidas'] - 1) &
+        (df_excel_no_cruzados['Debito'] <= row_csv['Salidas'] + 1)
+    ]
 
-    st.write("Registros del Excel sin cruzar (actualizado):")
-    st.write(f"Cantidad de registros sin cruzar en Excel (actualizado): {len(df_excel[~df_excel['cruzado']])}")
-    st.dataframe(df_excel[~df_excel['cruzado']])
+    # Si encontramos posibles cruces, mostrar al usuario
+    if not posibles_cruces.empty:
+        st.write(f"Registro CSV:")
+        st.write(row_csv[['FECHA', 'Salidas', 'DESCRIPCION']])
+        
+        # Mostrar los registros del Excel que están dentro del rango de ±1 peso
+        for idx_excel, row_excel in posibles_cruces.iterrows():
+            diferencia = row_excel['Debito'] - row_csv['Salidas']
+            st.write("Posible cruce en Excel:")
+            st.write(row_excel[['Fecha documento', 'Debito', 'Observaciones']])
+            st.write(f"Diferencia: {diferencia:.2f}")
+
+            # Botón para que el usuario confirme el cruce
+            if st.button(f"Confirmar cruce para registro CSV {idx_csv} y Excel {idx_excel}", key=f"confirm_{idx_csv}_{idx_excel}"):
+                # Agregar el registro cruzado a la lista de confirmados
+                cruce_confirmado = pd.concat([row_csv, row_excel], axis=0)
+                cruce_confirmado['Diferencia'] = diferencia
+                registros_confirmados.append(cruce_confirmado)
+
+                # Marcar los registros como cruzados en ambos DataFrames
+                df_csv_no_cruzados.at[idx_csv, 'Usado_en_cruce_aproximado'] = True
+                df_excel.at[idx_excel, 'cruzado'] = True
+
+# Actualizar DataFrames finales después de los cruces confirmados
+df_cruzados = pd.concat([df_cruzados] + registros_confirmados, ignore_index=True)
+df_csv_no_cruzados_final = df_csv_no_cruzados[~df_csv_no_cruzados['Usado_en_cruce_aproximado']]
+
+# Mostrar los DataFrames actualizados
+st.write("Registros cruzados (incluyendo cruces aproximados):")
+st.write(f"Cantidad de registros cruzados (total): {len(df_cruzados)}")
+st.dataframe(df_cruzados)
+
+st.write("Registros no cruzados en el CSV (final):")
+st.write(f"Cantidad de registros no cruzados en CSV (final): {len(df_csv_no_cruzados_final)}")
+st.dataframe(df_csv_no_cruzados_final)
+
+st.write("Registros del Excel sin cruzar (actualizado):")
+st.write(f"Cantidad de registros sin cruzar en Excel (actualizado): {len(df_excel[~df_excel['cruzado']])}")
+st.dataframe(df_excel[~df_excel['cruzado']])
 
 
 
