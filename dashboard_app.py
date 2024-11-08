@@ -5,7 +5,8 @@ import openpyxl
 st.title("Cargar y procesar archivo CSV y Excel")
 
 # Cargar archivo CSV sin nombres de columna
-csv_file = st.file_uploader("Cargar archivo CSV", type=["csv"])
+csv_file = st.file_uploader("Cargar archivo CSV", type=["csv"], key="csv_uploader")
+
 if csv_file is not None:
     # Leer el archivo CSV sin encabezado
     df_csv = pd.read_csv(csv_file, header=None, encoding='ISO-8859-1')
@@ -33,7 +34,7 @@ if csv_file is not None:
     st.dataframe(df_csv)
 
 # Cargar archivo Excel
-excel_file = st.file_uploader("Cargar archivo Excel", type=["xlsx"])
+excel_file = st.file_uploader("Cargar archivo Excel", type=["xlsx"], key="excel_uploader")
 if excel_file is not None:
     sheet_names = pd.ExcelFile(excel_file).sheet_names
     selected_sheet = st.selectbox("Selecciona la hoja de Excel", sheet_names)
