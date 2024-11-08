@@ -43,25 +43,26 @@ if excel_file is not None:
     st.write("Datos del Excel cargado:")
     st.write(f"Total de registros en Excel: {df_excel.shape[0]}")
     st.dataframe(df_excel)
-    # Primer cruce directo entre CSV y Excel
-    for idx_csv, row_csv in df_csv.iterrows():
-        if row_csv['Entradas'] > 0:  # Buscar cruce en Debitos
-            cruce_entrada = df_excel[(df_excel['Debito'] == row_csv['Entradas']) & (~df_excel['cruzado'])]
-            if not cruce_entrada.empty:
-                registro_excel = cruce_entrada.iloc[0]
-                registros_cruzados.append(pd.concat([row_csv, registro_excel], axis=0))
-                df_excel.at[registro_excel.name, 'cruzado'] = True
-            else:
-                registros_no_cruzados.append(row_csv)
-        elif row_csv['Salidas'] > 0:  # Buscar cruce en Creditos
-            cruce_salida = df_excel[(df_excel['Credito'] == row_csv['Salidas']) & (~df_excel['cruzado'])]
-            if not cruce_salida.empty:
-                registro_excel = cruce_salida.iloc[0]
-                registros_cruzados.append(pd.concat([row_csv, registro_excel], axis=0))
-                df_excel.at[registro_excel.name, 'cruzado'] = True
-            else:
-                registros_no_cruzados.append(row_csv)
-       # Registros cruzados
+   # Primer cruce directo entre CSV y Excel
+for idx_csv, row_csv in df_csv.iterrows():
+    if row_csv['Entradas'] > 0:  # Buscar cruce en Debitos
+        cruce_entrada = df_excel[(df_excel['Debito'] == row_csv['Entradas']) & (~df_excel['cruzado'])]
+        if not cruce_entrada.empty:
+            registro_excel = cruce_entrada.iloc[0]
+            registros_cruzados.append(pd.concat([row_csv, registro_excel], axis=0))
+            df_excel.at[registro_excel.name, 'cruzado'] = True
+        else:
+            registros_no_cruzados.append(row_csv)
+    elif row_csv['Salidas'] > 0:  # Buscar cruce en Creditos
+        cruce_salida = df_excel[(df_excel['Credito'] == row_csv['Salidas']) & (~df_excel['cruzado'])]
+        if not cruce_salida.empty:
+            registro_excel = cruce_salida.iloc[0]
+            registros_cruzados.append(pd.concat([row_csv, registro_excel], axis=0))
+            df_excel.at[registro_excel.name, 'cruzado'] = True
+        else:
+            registros_no_cruzados.append(row_csv)
+
+# Convertir `registros_cruzados` en un DataFrame solo después de llenar la lista
 df_cruzados = pd.DataFrame(registros_cruzados)
 st.write("Registros cruzados (desde CSV hacia Excel):")
 st.write(f"Cantidad de registros cruzados: {len(df_cruzados)}")
