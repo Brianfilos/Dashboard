@@ -43,8 +43,6 @@ if excel_file is not None:
     st.write("Datos del Excel cargado:")
     st.write(f"Total de registros en Excel: {df_excel.shape[0]}")
     st.dataframe(df_excel)
-    # Inicializar `registros_cruzados` antes de usarlo
-    registros_cruzados = []
     # Primer cruce directo entre CSV y Excel
     for idx_csv, row_csv in df_csv.iterrows():
         if row_csv['Entradas'] > 0:  # Buscar cruce en Debitos
