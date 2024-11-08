@@ -192,6 +192,91 @@ if excel_file is not None:
         st.dataframe(registro_servicios.to_frame().T)
         st.write(f"Diferencia entre la suma del CSV y el registro del Excel: {diferencia_servicios}")
 
+    import streamlit as st
+import pandas as pd
+
+st.title("Cargar y procesar archivo CSV y Excel")
+
+# Cargar archivo CSV sin nombres de columna
+csv_file = st.file_uploader("Cargar archivo CSV", type=["csv"])
+if csv_file is not None:
+    df_csv = pd.read_csv(csv_file, header=None, encoding='ISO-8859-1')
+    column_names = ['CUENTA', 'SUCURSAL', 'Vacio', 'FECHA', 'Vacio2', 'VALOR', 'CODIGO', 'DESCRIPCION', 'ceros', 'extra']
+    df_csv.columns = column_names[:df_csv.shape[1]]
+    df_csv = df_csv.drop(columns=['Vacio', 'Vacio2', 'ceros', 'extra'], errors='ignore')
+    df_csv['FECHA'] = pd.to_datetime(df_csv['FECHA'], format='%Y%m%d', errors='coerce')
+    df_csv['Entradas'] = df_csv['VALOR'].apply(lambda x: x if x > 0 else 0)
+    df_csv['Salidas'] = df_csv['VALOR'].apply(lambda x: -x if x < 0 else 0)
+    df_csv['Entradas'] = pd.to_numeric(df_csv['Entradas'], errors='coerce')
+    df_csv['Salidas'] = pd.to_numeric(df_csv['Salidas'], errors='coerce')
+    st.write("Datos del CSV cargado:")
+    st.write(f"Total de registros en CSV: {df_csv.shape[0]}")
+    st.dataframe(df_csv)
+
+# Cargar archivo Excel
+excel_file = st.file_uploader("Cargar archivo Excel", type=["xlsx"])
+if excel_file is not None:
+    sheet_names = pd.ExcelFile(excel_file).sheet_names
+    selected_sheet = st.selectbox("Selecciona la hoja de Excel", sheet_names)
+    df_excel = pd.read_excel(excel_file, sheet_name=selected_sheet)
+    df_excel['Debito'] = df_excel['Debito'].astype(float)
+    df_excel['Credito'] = df_excel['Credito'].astype(float)
+    registros_cruzados = []
+    registros_no_cruzados = []
+    df_excel['cruzado'] = False
+    st.write("Datos del Excel cargado:")
+    st.write(f"Total de registros en Excel: {df_excel.shape[0]}")
+    st.dataframe(df_excel)
+
+    # Primer cruce directo entre CSV y Excel
+    for idx_csv, row_csv in df_csv.iterrows():
+        if row_csv['Entradas'] > 0:
+            cruce_entrada = df_excel[(df_excel['Debito'] == row_csv['Entradas']) & (~df_excel['cruzado'])]
+            if not cruce_entrada.empty:
+                registro_excel = cruce_entrada.iloc[0]
+                registros_cruzados.append(pd.concat([row_csv, registro_excel], axis=0))
+                df_excel.at[registro_excel.name, 'cruzado'] = True
+            else:
+                registros_no_cruzados.append(row_csv)
+        elif row_csv['Salidas'] > 0:
+            cruce_salida = df_excel[(df_excel['Credito'] == row_csv['Salidas']) & (~df_excel['cruzado'])]
+            if not cruce_salida.empty:
+                registro_excel = cruce_salida.iloc[0]
+                registros_cruzados.append(pd.concat([row_csv, registro_excel], axis=0))
+                df_excel.at[registro_excel.name, 'cruzado'] = True
+            else:
+                registros_no_cruzados.append(row_csv)
+
+    df_cruzados = pd.DataFrame(registros_cruzados)
+    st.write("Registros cruzados (desde CSV hacia Excel):")
+    st.write(f"Cantidad de registros cruzados: {len(df_cruzados)}")
+    st.dataframe(df_cruzados)
+
+    df_csv_no_cruzados = pd.DataFrame(registros_no_cruzados)
+    st.write("Registros no cruzados en el CSV:")
+    st.write(f"Cantidad de registros no cruzados en CSV: {len(df_csv_no_cruzados)}")
+    st.dataframe(df_csv_no_cruzados)
+
+    excel_perspective_cruces = []
+    for cruzado in registros_cruzados:
+        registro_csv = cruzado.iloc[:len(df_csv.columns)]
+        registro_excel = cruzado.iloc[len(df_csv.columns):]
+        combined_record = pd.concat([registro_excel, registro_csv], axis=0)
+        excel_perspective_cruces.append(combined_record)
+
+    df_excel_perspective_cruces = pd.DataFrame(excel_perspective_cruces)
+    st.write("Cruces desde la perspectiva del Excel:")
+    st.write(f"Cantidad de registros cruzados desde Excel: {len(df_excel_perspective_cruces)}")
+    st.dataframe(df_excel_perspective_cruces)
+
+    df_excel_no_cruzados = df_excel[~df_excel['cruzado']].copy()
+    st.write("Registros del Excel sin cruzar:")
+    st.write(f"Cantidad de registros sin cruzar en Excel: {len(df_excel_no_cruzados)}")
+    st.dataframe(df_excel_no_cruzados)
+
+    # Asegurarse de que `Usado_en_cruce_aproximado` esté en `df_csv_no_cruzados`
+    df_csv_no_cruzados['Usado_en_cruce_aproximado'] = False
+
     # Cruce aproximado de registros restantes
     st.subheader("Cruce Aproximado de Registros Restantes")
 
@@ -223,7 +308,7 @@ if excel_file is not None:
                     df_excel.at[idx_excel, 'cruzado'] = True
 
     df_cruzados = pd.concat([df_cruzados] + registros_confirmados, ignore_index=True)
-    df_csv_no_cruzados_final = df_csv_no_cruzados[~df_csv_no_cruzados.get('Usado_en_cruce_aproximado', False)]
+    df_csv_no_cruzados_final = df_csv_no_cruzados[~df_csv_no_cruzados['Usado_en_cruce_aproximado']]
 
     st.write("Registros cruzados (incluyendo cruces aproximados):")
     st.write(f"Cantidad de registros cruzados (total): {len(df_cruzados)}")
