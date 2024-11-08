@@ -231,17 +231,18 @@ st.write(f"Cantidad de registros sin cruzar en Excel (actualizado): {len(df_exce
 st.dataframe(df_excel[~df_excel['cruzado']])
 
     
-    # DataFrames finales y visualización
-    df_cruzados = pd.DataFrame(registros_cruzados)
-    st.write("Registros cruzados (con cruce adicional de gastos):")
-    st.write(f"Cantidad de registros cruzados (total): {len(df_cruzados)}")
-    st.dataframe(df_cruzados)
-    st.write("Registros no cruzados en el CSV (final):")
-    st.write(f"Cantidad de registros no cruzados en CSV (final): {len(df_csv_no_cruzados_final)}")
-    st.dataframe(df_csv_no_cruzados_final)
-    st.write("Registros del Excel sin cruzar (actualizado):")
-    st.write(f"Cantidad de registros sin cruzar en Excel (actualizado): {len(df_excel[~df_excel['cruzado']])}")
-    st.dataframe(df_excel[~df_excel['cruzado']])
+# DataFrames finales y visualización
+df_cruzados = pd.DataFrame(registros_cruzados)
+st.write("Registros cruzados (con cruce adicional de gastos):")
+st.write(f"Cantidad de registros cruzados (total): {len(df_cruzados)}")
+st.dataframe(df_cruzados)
+st.write("Registros no cruzados en el CSV (final):")
+st.write(f"Cantidad de registros no cruzados en CSV (final): {len(df_csv_no_cruzados_final)}")
+st.dataframe(df_csv_no_cruzados_final)
+st.write("Registros del Excel sin cruzar (actualizado):")
+st.write(f"Cantidad de registros sin cruzar en Excel (actualizado): {len(df_excel[~df_excel['cruzado']])}")
+st.dataframe(df_excel[~df_excel['cruzado']])
+
 
 
 
