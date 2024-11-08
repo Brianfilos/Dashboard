@@ -81,15 +81,15 @@ for cruzado in registros_cruzados:
         registro_excel = cruzado.iloc[len(df_csv.columns):]
         combined_record = pd.concat([registro_excel, registro_csv], axis=0)
         excel_perspective_cruces.append(combined_record)
-    df_excel_perspective_cruces = pd.DataFrame(excel_perspective_cruces)
-    st.write("Cruces desde la perspectiva del Excel:")
-    st.write(f"Cantidad de registros cruzados desde Excel: {len(df_excel_perspective_cruces)}")
-    st.dataframe(df_excel_perspective_cruces)
+df_excel_perspective_cruces = pd.DataFrame(excel_perspective_cruces)
+st.write("Cruces desde la perspectiva del Excel:")
+st.write(f"Cantidad de registros cruzados desde Excel: {len(df_excel_perspective_cruces)}")
+st.dataframe(df_excel_perspective_cruces)
     # Registros sin cruzar en el Excel
-    df_excel_no_cruzados = df_excel[~df_excel['cruzado']].copy()
-    st.write("Registros del Excel sin cruzar:")
-    st.write(f"Cantidad de registros sin cruzar en Excel: {len(df_excel_no_cruzados)}")
-    st.dataframe(df_excel_no_cruzados)
+df_excel_no_cruzados = df_excel[~df_excel['cruzado']].copy()
+st.write("Registros del Excel sin cruzar:")
+st.write(f"Cantidad de registros sin cruzar en Excel: {len(df_excel_no_cruzados)}")
+st.dataframe(df_excel_no_cruzados)
     # Nuevo cruce con gastos bancarios
 # Cruce adicional: gastos bancarios
 descripciones_filtro = [
